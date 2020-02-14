@@ -2,6 +2,7 @@ const _ = require('lodash/fp')
 const { match, when } = require('./utils/match-when')
 const regex = require('./data/regex')
 const escapeStringRegexp = require('escape-string-regexp')
+const abbreviations = require('./data/abbreviations')
 const dictionary = require('./data/dictionary')
 
 const log = label => str => {
@@ -53,6 +54,20 @@ const sanitizeStreet = _.flow([
   _.replace(/(Đường)((?:(?!Đường ).)*?((?=,)))/i, '$1 $2'),
 ])
 
+const encodeDictionaryWord = str => {
+  const re = dictionary.map(value => `(${value})`).join('|')
+
+  return str.replace(new RegExp(re, 'gi'), (m, ...p) => {
+    return '#' + p.findIndex(value => !!value)
+  })
+}
+
+const decodeDictionaryWord = str => {
+  return str.replace(new RegExp(/(#)(\d+)/, 'g'), (m, p1, p2) => {
+    return dictionary[parseInt(p2)]
+  })
+}
+
 const cleanAddress = _.flow([
   _.replace(/\.,/g, ','),
   _.replace(
@@ -63,18 +78,27 @@ const cleanAddress = _.flow([
     /^([a-z0-9]*)(\s?-\s?)([a-z0-9]*)(,?\s)([a-z0-9]*)(\s?-\s?)([a-z0-9]*)/i,
     '$1@$3$4$5@$7',
   ),
-  // _.replace(/^([a-z0-9]*)(\s?-\s?)([a-z0-9]*)/i, '$1@$3'),
-  _.replace(/^([0-9a-z]+)(\s?-\s?)((?:.)*?)(?=,)/gi, (_, p1, p2, p3) => {
-    if (p3.length > 3) {
-      return p1 + ' @ ' + p3
-    }
+  encodeDictionaryWord,
+  str => {
+    const re = /^([a-t0-9]+)(-)([a-t0-9]+)/gi
+    const number = str.match(re)
 
-    return p1 + '@' + p3
-  }),
-  _.replace(/([0-9]+)(-)([0-9]+)(-)([0-9]+)/, '$1@$3@$5'),
-  _.replace(/([0-9]+)(-)([0-9]+)/, '$1@$3'),
-  _.replace(/\s?-\s?/g, ', '),
-  _.replace(/(\d)-/g, '$1,'),
+    return _.flow([
+      _.replace(new RegExp(number, 'gi'), '%'),
+      _.replace(/^([0-9a-z]+)(\s?-\s?)((?:.)*?)(?=,)/gi, (_, p1, p2, p3) => {
+        if (p3.length > 3) {
+          return p1 + ' @ ' + p3
+        }
+
+        return p1 + '@' + p3
+      }),
+      _.replace(/([0-9]+)(-)([0-9]+)(-)([0-9]+)/, '$1@$3@$5'),
+      _.replace(/([0-9]+)(-)([0-9]+)/, '$1@$3'),
+      _.replace(/\s?-\s?/g, ', '),
+      _.replace(/(\d)-/g, '$1,'),
+      _.replace('%', number)
+    ])(str)
+  },
   _.replace(/; /g, ' '),
   _.replace(/@/g, '-'),
   _.replace(/(ngách|ngach)(\d+)/gi, '$1 $2'),
@@ -87,6 +111,24 @@ const addLeadingZero = _.flow([
   }),
 ])
 
+const sanitizeWithoutFirst = (regex, replacement, maxLength = 20) => str => {
+  const [p1, ...rest] = str.split(',')
+
+  if (rest.length === 0) {
+    return str
+  }
+
+  const formatted = rest.join(',').replace(regex, replacement)
+
+  if (p1.length > maxLength) {
+    const formattedP1 = p1.replace(regex, replacement)
+
+    return [formattedP1].concat(formatted).join(',')
+  }
+
+  return [p1].concat(formatted).join(',')
+}
+
 const sanitizeCounty = _.flow([
   _.replace(/(District((?:(?!District).)*?(\s{2}|(?=,))))/gi, (_, p1, p2) => {
     if (p2 && !isNaN(p2)) {
@@ -96,9 +138,9 @@ const sanitizeCounty = _.flow([
     return p2
   }),
   _.replace(/District/i, ''),
-  _.replace(/(,?\s?)((\bQuan\b)|(Q\s|Q\.))/gi, ', Quận '),
+  sanitizeWithoutFirst(/(,?\s?)((\bQuan\b)|(Q\s|Q\.))/gi, ', Quận '),
   _.replace(/\s(q|-q)(\d{1,2})/gi, ' Quận $2'),
-  _.replace(/(q)(?=[^ul\s.,0-9])/gi, 'Quận '),
+  _.replace(/(q)(?=[^uls\s.,0-9])/gi, 'Quận '),
   _.replace(/(,?\s?)((Huyen\b)|(\bH\.))/gi, ', Huyện '),
 ])
 
@@ -106,8 +148,9 @@ const sanitizeLocality = _.flow([
   _.replace(/Phường,/gi, '#'),
   _.replace(/Phường/gi, ', Phường '),
   _.replace(/(,\s?)((Phuong)|(P\s|P\.|F\s|F\.|Ward))/gi, ', Phường '),
-  _.replace(/\s([pf])(\d{1,2})\b/gi, ', Phường $2'),
-  _.replace(/(p)(?=[^hlua\s.,0-9])/gi, 'Phường '),
+  // _.replace(/\s([pf])(\d{1,2})\b/gi, ', Phường $2'),
+  sanitizeWithoutFirst(/\s([pf])(\d{1,2})\b/gi, ', Phường $2'),
+  _.replace(/\s(p)(?=[^hluaefpr\s.,0-9])/gi, 'Phường '),
   _.replace(/\b(x\.)\b/gi, 'Xã '),
   _.replace(/(\s)(Ấp)/i, ' Ấp '),
   _.replace(/#/g, 'Phường,')
@@ -157,12 +200,13 @@ const cleanSuffix = match({
 const cleanWildcard = _.flow([
   _.replace(/^([0-9/]+)(,?)(\s-)?/, '$1'), // xoa dau , ke so
   _.replace(/(\s-\s|,\s,)/g, ', '), // xoa dau -
-  _.replace(/^.*:/g, ''), // xoa cac ky tu la dau chuoi - vd: Người nhận : khả kỳ Sdt: 0792042968 Địa chỉ: Duong ABC,
+  _.replace(/^.*:[^,]/g, ''), // xoa cac ky tu la dau chuoi - vd: Người nhận : khả kỳ Sdt: 0792042968 Địa chỉ: Duong ABC,
+  _.replace(/:,/g, '')
 ])
 
 const reverseString = _.flow([_.split(','), _.reverse, _.join(',')])
 
-const revertStreetAbbr = match(createMatchFactory(dictionary)())
+const cleanAbbreviations = match(createMatchFactory(abbreviations)())
 
 const dedupStringFactory = patternString => (value, index) => {
   const reLocality = /(Phường((?:(?!Phường).)*?))|(Thị trấn((?:(?!Thị trấn).)*?))/gi
@@ -172,10 +216,25 @@ const dedupStringFactory = patternString => (value, index) => {
     return value
   }
 
-  if (!reLocality.test(value) && !reWard.test(value)) {
+  if (!reLocality.test(value) && !reWard.test(value) && index !== 0) {
     const patternStringNoAccent = removeAccents(patternString)
+    const reStr = [
+      `\\d ${patternString}`,
+      `\\d ${patternStringNoAccent}`,
+      `Đường\\s+${patternString}`,
+      `Đường\\s+${patternStringNoAccent}`,
+      `Phố ${patternString}`,
+      `Phố ${patternStringNoAccent}`,
+      `Thị xã ${patternString}`,
+      `Thị xã ${patternStringNoAccent}`,
+      `Kho ${patternString}`,
+      `Kho ${patternStringNoAccent}`,
+      `Tuyến ${patternString}`,
+      `Tuyen ${patternStringNoAccent}`,
+    ].join('|')
+
     const re = new RegExp(
-      `^(?!.*(\\d ${patternString}|Đường\\s+${patternString}|Thị xã ${patternString}|\\d ${patternStringNoAccent}|Kho ${patternString}|Kho ${patternStringNoAccent}|Tuyến ${patternString}|Tuyen ${patternStringNoAccent}|Thị xã ${patternStringNoAccent}|Đường\\s+${patternStringNoAccent})).*$`,
+      `^(?!.*(${reStr})).*$`,
       'gi',
     )
 
@@ -312,7 +371,8 @@ const format = _.flow([
   _.replace(/Vietnam|Việt Nam|Viet Nam|VN|ViệtNam/gi, ''),
   _.replace(/Đường/gi, ' Đường '),
   _.replace(/Đc|Dc|, Hem|Địa Chị|Địa Chỉ/gi, ''),
-  revertStreetAbbr,
+  _.replace(/T7, Cn/gi, ''),
+  cleanAbbreviations,
   sanitizeCounty,
   sanitizeLocality,
   addLeadingZero,
@@ -340,7 +400,7 @@ const format = _.flow([
   _.replace(/(phố)/, ' Phố'), // them khoang cach
   _.replace(/(Ngõ|số)(\d+)/i, '$1 $2'), // them khoang cach
   _.replace(
-    /(QUA GỌI|qua goi|Gọi|Goi|Láy|Lấy|Lay|Giao Trước|Giao truoc|Nghỉ|Có)((?:.)*?(\s{2}|(?=,)))/i,
+    /(Sau|QUA GỌI|qua goi|Gọi|Goi|Láy|Lấy|Lay|Giao Trước|Giao truoc|Nghỉ|Có)((?:.)*?(\s{2}|(?=,)))/i,
     '',
   ),
   _.replace(/(Gần((?:.)*?(\s{2}|(?=,))))/i, ', $1'),
@@ -348,6 +408,7 @@ const format = _.flow([
   _.replace(/,\s,\s,|,\s,/g, ','),
   _.replace(/\/,/g, ','),
   _.replace(/\/\s/g, ' '), // xoa dau /
+  decodeDictionaryWord,
   trimAll,
 ])
 
