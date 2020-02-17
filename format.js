@@ -71,7 +71,7 @@ const decodeDictionaryWord = str => {
 const cleanAddress = _.flow([
   _.replace(/\.,/g, ','),
   _.replace(
-    /^(số|so|ngo|ngõ|hẻm|hem|số nhà|sn|Sô Nha|Sô|Đến)\s?([0-9]+)/i,
+    /^(số|so|ngo|ngõ|hẻm|hem|số nhà|sn|Sô Nha|Sô|Đến|Nhà Số|nha so)\s?([0-9]+)/i,
     '$2',
   ),
   _.replace(
@@ -369,7 +369,7 @@ const cleanPostalCode = _.replace(/,\s+\d+,/gi, ',')
 const format = _.flow([
   _.replace(/Phuong(?:(?!Phuong).)*?Việt Nam,/gi, ''),
   _.replace(/Vietnam|Việt Nam|Viet Nam|VN|ViệtNam/gi, ''),
-  _.replace(/Đường/gi, ' Đường '),
+  _.replace(/Đường|D\./gi, ' Đường '),
   _.replace(/Đc|Dc|, Hem|Địa Chị|Địa Chỉ/gi, ''),
   _.replace(/T7, Cn/gi, ''),
   cleanAbbreviations,
@@ -408,6 +408,7 @@ const format = _.flow([
   _.replace(/,\s,\s,|,\s,/g, ','),
   _.replace(/\/,/g, ','),
   _.replace(/\/\s/g, ' '), // xoa dau /
+  _.replace(/(\s?trên\s?)(\d+)/gi, '/$2'),
   decodeDictionaryWord,
   trimAll,
 ])
