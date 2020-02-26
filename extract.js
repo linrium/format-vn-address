@@ -1,3 +1,4 @@
+const _ = require('lodash/fp')
 
 const extractAddressParts = arr => {
   let number = ''
@@ -71,4 +72,11 @@ const extractAddress = str => {
   }
 }
 
-module.exports = extractAddress
+const isVenue = str => {
+  return str.split(',').length <= 2
+}
+
+module.exports = {
+  extractAddress,
+  isVenue
+}

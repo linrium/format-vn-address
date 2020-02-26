@@ -1,7 +1,8 @@
 const format = require('./format')
-const extract = require('./extract')
+const { isVenue, extractAddress } = require('./extract')
 
 module.exports = {
   format,
-  extract
+  isVenue,
+  extract: extractAddress
 }
