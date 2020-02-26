@@ -35,7 +35,7 @@ const trimAll = _.flow([_.split(','), _.map(_.trim), _.join(', ')])
 const splitAll = _.split(',')
 
 const capitalizeAll = _.map(
-  _.flow([_.split(' '), _.map(_.flow([_.toLower, _.upperFirst])), _.join(' ')]),
+  _.flow([_.split(' '), _.map(_.upperFirst), _.join(' ')]),
 )
 
 const dedupString = _.flow([
