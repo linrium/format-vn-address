@@ -72,11 +72,17 @@ const extractAddress = str => {
   }
 }
 
+const isAddress = str => {
+  const firstPart = str.split(',')[0];
+  return firstPart.match(/^[0-9]+[a-zA-Z\-\/0-9]*[\s]+/)
+}
+
 const isVenue = str => {
-  return str.split(',').length <= 2
+  return !isAddress(str)
 }
 
 module.exports = {
   extractAddress,
+  isAddress,
   isVenue
 }
