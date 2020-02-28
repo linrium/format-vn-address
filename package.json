@@ -1,8 +1,23 @@
 {
-  "name": "format-vn-address",
-  "version": "1.0.0",
+  "name": "@ahamove/format-vn-address",
+  "description": "Format Viet Nam Address",
+  "version": "0.0.1",
   "main": "index.js",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lynkxyz/format-vn-address.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lynkxyz/format-vn-address/issues"
+  },
+  "homepage": "https://github.com/lynkxyz/format-vn-address#readme",
+  "author": "lynkxyz",
+  "keywords": [
+    "address",
+    "format address",
+    "vietname address"
+  ],
   "dependencies": {
     "escape-string-regexp": "^2.0.0",
     "lodash": "^4.17.15"
