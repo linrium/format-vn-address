@@ -257,14 +257,14 @@ const extract = str => {
     locality
   }
 
-  if (rawData) {
-    result = {
-      country: 'Việt Nam',
-      region: rawData.region,
-      county: rawData.county,
-      locality: rawData.locality,
-    }
-  }
+  // if (rawData) {
+  //   result = {
+  //     country: 'Việt Nam',
+  //     region: rawData.region,
+  //     county: rawData.county,
+  //     locality: rawData.locality,
+  //   }
+  // }
 
   const addressParams = arr.slice(0, index).join(',')
   const venue = isVenue(str) ? addressParams : ''
