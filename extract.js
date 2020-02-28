@@ -1,11 +1,5 @@
 const _ = require('lodash/fp')
 const removeAccents = require('./utils/remove-accents')
-const low = require('lowdb')
-const format = require('./format')
-const FileSync = require('lowdb/adapters/FileSync')
-
-const adapter = new FileSync('db.json')
-const db = low(adapter)
 
 const hasCountry = str => {
   return /Việt Nam/gi.test(str)
@@ -147,14 +141,6 @@ const findDataByLocality = (county, locality) => {
     .value()
 }
 
-const validateCounty = (rawCounty, country) => {
-  return new RegExp(removeAccents(country), 'gi').test(rawCounty)
-}
-
-const validateLocality = (rawLocality, locality) => {
-  return new RegExp(removeAccents(locality), 'gi').test(rawLocality)
-}
-
 const extractAddressParts = arr => {
   let number = ''
   let street = ''
@@ -256,15 +242,6 @@ const extract = str => {
     county,
     locality
   }
-
-  // if (rawData) {
-  //   result = {
-  //     country: 'Việt Nam',
-  //     region: rawData.region,
-  //     county: rawData.county,
-  //     locality: rawData.locality,
-  //   }
-  // }
 
   const addressParams = arr.slice(0, index).join(',')
   const venue = isVenue(str) ? addressParams : ''
