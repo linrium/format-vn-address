@@ -1,5 +1,5 @@
 const format = require('../format')
-const cases = require('./addresses')
+const cases = require('./addresses.mock')
 
 describe('test format function', function() {
   it.each(cases)(

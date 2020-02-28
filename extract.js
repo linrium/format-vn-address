@@ -1,4 +1,159 @@
 const _ = require('lodash/fp')
+const removeAccents = require('./utils/remove-accents')
+const low = require('lowdb')
+const format = require('./format')
+const FileSync = require('lowdb/adapters/FileSync')
+
+const adapter = new FileSync('db.json')
+const db = low(adapter)
+
+const hasCountry = str => {
+  return /Việt Nam/gi.test(str)
+}
+
+const findCountry = str => {
+  const arr = str.split(',')
+
+  if (hasCountry(str)) {
+    return arr[arr.length - 1].trim()
+  }
+
+  return ''
+}
+
+const findRegion = str => {
+  const arr = str.split(',')
+
+  if (hasCountry(str)) {
+    return arr[arr.length - 2].trim()
+  }
+
+  return ''
+}
+
+const findCounty = str => {
+  const arr = str.split(',')
+  let county = ''
+  let index = -1
+
+  if (arr.length === 10) {
+    county = arr[7]
+    index = 7
+  }
+
+  if (arr.length === 9) {
+    county = arr[6]
+    index = 6
+  }
+
+  if (arr.length === 8) {
+    county = arr[5]
+    index = 5
+  }
+
+  if (arr.length === 7) {
+    county = arr[4]
+    index = 4
+  }
+
+  if (arr.length === 6) {
+    county = arr[3]
+    index = 3
+  }
+
+  if (arr.length === 5) {
+    county = arr[2]
+    index = 2
+  }
+
+  if (arr.length === 4) {
+    county = arr[1]
+    index = 1
+  }
+
+  return {
+    index,
+    county: county.trim()
+  }
+}
+
+const findLocality = str => {
+  const arr = str.split(',')
+  let locality = ''
+  let index = -1
+
+  if (hasCountry(str)) {
+    if (arr.length === 10) {
+      locality = arr[6]
+      index = 6
+    }
+
+    if (arr.length === 9) {
+      locality = arr[5]
+      index = 5
+    }
+
+    if (arr.length === 8) {
+      locality = arr[4]
+      index = 4
+    }
+
+    if (arr.length === 7) {
+      locality = arr[3]
+      index = 3
+    }
+
+    if (arr.length === 6) {
+      locality = arr[2]
+      index = 2
+    }
+
+    if (arr.length === 5) {
+      locality = arr[1]
+      index = 1
+    }
+
+    if (arr.length === 3) {
+      locality = ''
+    }
+
+    return {
+      index,
+      name: locality.trim()
+    }
+  }
+
+  if (arr.length >= 2) {
+    return {
+      index,
+      name: arr[1].trim()
+    }
+  }
+
+  return {
+    index,
+    name
+  }
+}
+
+const findDataByLocality = (county, locality) => {
+  const reCounty = new RegExp(removeAccents(county), 'gi')
+  const reLocality = new RegExp(removeAccents(locality), 'gi')
+
+  return db.get('admin')
+    .find(o => {
+      return reCounty.test(o.countyNonAccents) && reLocality.test(o.localityNonAccents)
+    })
+    .value()
+}
+
+const validateCounty = (rawCounty, country) => {
+  return new RegExp(removeAccents(country), 'gi').test(rawCounty)
+}
+
+const validateLocality = (rawLocality, locality) => {
+  return new RegExp(removeAccents(locality), 'gi').test(rawLocality)
+}
 
 const extractAddressParts = arr => {
   let number = ''
@@ -67,9 +222,12 @@ const extractAddress = str => {
   return {
     number,
     street,
-    address,
-    venue: address,
+    address
   }
+}
+
+const isHouseNumber = str => {
+  return /^[0-9a-h/]+/gi.test(str)
 }
 
 const isAddress = str => {
@@ -81,8 +239,54 @@ const isVenue = str => {
   return !isAddress(str)
 }
 
-module.exports = {
-  extractAddress,
-  isAddress,
-  isVenue
+const extract = str => {
+  const arr = str.split(',')
+  const country = findCountry(str)
+  const region = findRegion(str)
+  const {name: county, index: countyIndex} = findCounty(str)
+  const {name: locality, index: localityIndex} = findLocality(str)
+
+  const index = localityIndex > -1 ? localityIndex : countyIndex
+
+  const rawData = findDataByLocality(county, locality)
+
+  let result = {
+    country,
+    region,
+    county,
+    locality
+  }
+
+  if (rawData) {
+    result = {
+      country: 'Việt Nam',
+      region: rawData.region,
+      county: rawData.county,
+      locality: rawData.locality,
+    }
+  }
+
+  const addressParams = arr.slice(0, index).join(',')
+  const venue = isVenue(str) ? addressParams : ''
+  const {number, street, address} = extractAddress(addressParams)
+
+  if (number) {
+    result.number = number
+  }
+
+  if (street) {
+    result.street = street
+  }
+
+  if (venue) {
+    result.venue = venue
+  } else {
+    result.address = address
+  }
+
+  return result
 }
+
+console.log(extract(format('03A Trung Hoà, Cầu Giấy, Hà Nội, Phường Trung Hòa, Quận Cầu Giấy, Hà Nội, Phường Trung Hoà, Quận Cầu Giấy, Hà Nội')))
+
+module.exports = extract

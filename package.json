@@ -5,7 +5,9 @@
   "license": "MIT",
   "dependencies": {
     "escape-string-regexp": "^2.0.0",
-    "lodash": "^4.17.15"
+    "flexsearch": "^0.6.32",
+    "lodash": "^4.17.15",
+    "lowdb": "^1.0.0"
   },
   "devDependencies": {
     "@types/jest": "^25.1.2",
