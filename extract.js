@@ -287,6 +287,8 @@ const extract = str => {
   return result
 }
 
-console.log(extract(format('03A Trung Hoà, Cầu Giấy, Hà Nội, Phường Trung Hòa, Quận Cầu Giấy, Hà Nội, Phường Trung Hoà, Quận Cầu Giấy, Hà Nội')))
-
-module.exports = extract
+module.exports = {
+  extract,
+  isAddress,
+  isVenue
+}
