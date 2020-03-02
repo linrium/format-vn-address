@@ -67,7 +67,7 @@ const findCounty = str => {
 
   return {
     index,
-    county: county.trim()
+    name: county.trim()
   }
 }
 
@@ -126,7 +126,7 @@ const findLocality = str => {
 
   return {
     index,
-    name
+    name: locality
   }
 }
 
