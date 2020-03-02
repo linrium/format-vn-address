@@ -133,12 +133,6 @@ const findLocality = str => {
 const findDataByLocality = (county, locality) => {
   const reCounty = new RegExp(removeAccents(county), 'gi')
   const reLocality = new RegExp(removeAccents(locality), 'gi')
-
-  return db.get('admin')
-    .find(o => {
-      return reCounty.test(o.countyNonAccents) && reLocality.test(o.localityNonAccents)
-    })
-    .value()
 }
 
 const extractAddressParts = arr => {
@@ -233,8 +227,6 @@ const extract = str => {
   const {name: locality, index: localityIndex} = findLocality(str)
 
   const index = localityIndex > -1 ? localityIndex : countyIndex
-
-  const rawData = findDataByLocality(county, locality)
 
   let result = {
     country,
