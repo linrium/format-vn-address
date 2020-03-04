@@ -1,7 +1,7 @@
 {
   "name": "@ahamove/format-vn-address",
   "description": "Format Viet Nam Address",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "index.js",
   "license": "MIT",
   "repository": {
